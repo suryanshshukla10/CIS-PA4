@@ -45,10 +45,10 @@ def main(
     # logging.info(Indices.arrInd)
 
     # reading Rigid bodyA and B
-    RigidBodyA = readers.RigidBody(data_dir / f"Problem3-BodyA.txt")
+    RigidBodyA = readers.RigidBody(data_dir / f"Problem4-BodyA.txt")
     logging.info(
         "loading Rigid Body A data complete.............................")
-    RigidBodyB = readers.RigidBody(data_dir / f"Problem3-BodyB.txt")
+    RigidBodyB = readers.RigidBody(data_dir / f"Problem4-BodyB.txt")
     logging.info(
         "loading Rigid Body B data complete.........................")
 ######Define the file name here ############################################
@@ -60,11 +60,11 @@ def main(
     complete_file_name = "PA3-G-Unknown-SampleReadingsTest.txt"
 
     # Unknown File 2
-    # input_file = "PA3-H-Unknown"
-    # complete_file_name = "PA3-H-Unknown-SampleReadingsTest.txt"
+    # input_file = "PA4-H-Unknown"
+    # complete_file_name = "PA4-H-Unknown-SampleReadingsTest.txt"
 
     # Unknown File 3
-    # input_file = "PA3-J-Unknown-"
+    # input_file = "PA4-J-Unknown-"
     # complete_file_name = "PA3-J-Unknown-SampleReadingsTest.txt"
 
     # Reading sampleReading.txt
@@ -206,10 +206,10 @@ def main(
         # logging.info(output_pts_dict[0])
     out_list = np.array(out_list)
     # logging.info(out_list)
-    # output = writers.PA3(name, l2)
+    # output = writers.PA4(name, l2)
     # logging.info(l2)
 
-    output = writers.PA3(input_file, out_list)
+    output = writers.PA4(input_file, out_list)
     output.save(output_dir)
 
 

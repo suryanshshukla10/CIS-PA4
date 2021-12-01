@@ -19,7 +19,7 @@ class Writer:
         log.info(f"Saved output to {output_dir / self.fname}")
 
 
-class PA3(Writer):
+class PA4(Writer):
     """Output formatter class for programming assignment 1."""
 
     def __init__(self, name: str, arr):

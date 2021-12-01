@@ -32,10 +32,10 @@ def main(
         output_dir.mkdir()
 
     # Read inputs
-    Vertices = readers.Vertices(data_dir / f"Problem3Mesh.sur")
+    Vertices = readers.Vertices(data_dir / f"Problem4MeshFile.sur")
     logging.info(
         "loading triangle mesh  vertices data complete............................. ")
-    Indices = readers.Indices(data_dir / f"Problem3Mesh.sur")
+    Indices = readers.Indices(data_dir / f"Problem4MeshFile.sur")
     logging.info(
         "loading triangle mesh indices data complete.............................")
 
@@ -45,16 +45,16 @@ def main(
     # logging.info(Indices.arrInd)
 
     # reading Rigid bodyA and B
-    RigidBodyA = readers.RigidBody(data_dir / f"Problem3-BodyA.txt")
+    RigidBodyA = readers.RigidBody(data_dir / f"Problem4-BodyA.txt")
     logging.info(
         "loading Rigid Body A data complete.............................")
-    RigidBodyB = readers.RigidBody(data_dir / f"Problem3-BodyB.txt")
+    RigidBodyB = readers.RigidBody(data_dir / f"Problem4-BodyB.txt")
     logging.info(
         "loading Rigid Body B data complete.........................")
 ######Define the file name here ############################################
     temp3 = ['A', 'B', 'C', 'D', 'E', 'F']
     for q in track(temp3):
-        input_file = "PA3-"+q
+        input_file = "PA4-"+q
         print("\t \t ------------------------------Input File: PA3-",
               q, "-Debug-SampleReadingsTest------------------------------")
 
@@ -71,7 +71,7 @@ def main(
         # logging.info(RigidBodyB.tip)
         # logging.info(RigidBodyB.Y)
 
-        # Registration
+        # Registration function from PA1
         PA1 = pa1Functions.PA1
 
         output_pts_dict = {}
@@ -200,7 +200,7 @@ def main(
         # output = writers.PA3(name, l2)
         # logging.info(l2)
 
-        output = writers.PA3(input_file, out_list)
+        output = writers.PA4(input_file, out_list)
         output.save(output_dir)
 
 

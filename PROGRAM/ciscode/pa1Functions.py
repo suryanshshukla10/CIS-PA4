@@ -2,115 +2,158 @@ import numpy as np
 
 
 class PA1:
-    def rotation(R, vector):
-        rotation_matrix = R  # Define the rotation matrix
-        # finding the determinanat
-        determinant = np.linalg.det(rotation_matrix)
+    def points_registration(A, B):
+        '''
+        Point cloud to point cloud registration function
+        3D-3D registration
+        Calculates the least-squares best-fit transform between corresponding 3D points A->B
+        Input:
+        A: Nx3 numpy array of corresponding 3D points
+        B: Nx3 numpy array of corresponding 3D points
+        Returns:
+        T: 4x4 homogeneous transformation matrix
+        R: 3x3 rotation matrix
+        t: 3x1 column vector
+        '''
 
-        rotation_matrix_transpose = np.matrix.transpose(
-            R)  # Finding the transpose of rotation matrix
-        # RR^T = I check orthogonality
-        multiplication = np.matmul(rotation_matrix, rotation_matrix_transpose)
+        assert len(A) == len(B)
 
-        determinant = int(determinant)
-        euclidian_distance = int(np.sum((multiplication-np.identity(3))**2))
-        if ((determinant - 1) > 1e-3):
-            raise Exception("Not a Rotation matrix")
-        if ((euclidian_distance) > 1e-3):
-            raise Exception("Not a Rotation matrix")
+        # translate points to their centroids
+        centroid_A = np.mean(A, axis=0)
+        centroid_B = np.mean(B, axis=0)
+        AA = A - centroid_A
+        BB = B - centroid_B
 
-        new_vector = np.matmul(rotation_matrix, vector)
-        return new_vector
+        # rotation matrix
+        H = np.dot(AA.T, BB)
+        U, S, Vt = np.linalg.svd(H)
+        R = np.dot(Vt.T, U.T)
 
-    def frame_transformation(R, p, vector):
-        point_transformed = rotation(R, vector)+p.reshape(3, 1)
-        return point_transformed
-        # This part is the SVD based points registeration function.
+        # special reflection case
+        if np.linalg.det(R) < 0:
+            Vt[2, :] *= -1
+            R = np.dot(Vt.T, U.T)
 
-        # The rotation function of processed points set A' B'
-    def points_registeration_rotation(A, B):
-        H = np.matmul(np.matrix.transpose(A), B)
-        U, S, V = np.linalg.svd(H, full_matrices=False)
-        R = np.matmul(np.transpose(V), np.transpose(U))
-        if np.abs(np.linalg.det(R) - 1) > 1e-3:
-            raise Exception("Method fails!")
+        # translation
+        t = centroid_B.T - np.dot(R, centroid_A.T)
 
-        return R
+        # homogeneous transformation
+        T = np.identity(4)
+        T[0:3, 0:3] = R
+        T[0:3, 3] = t
 
-    # SVD registeration function
-    def points_registeration(A, B):
-        m_A = A-np.mean(A, axis=0)
-        m_B = B-np.mean(B, axis=0)
+        # return T, R, t
+        return T
 
-        # R = points_registeration_rotation(m_A, m_B)
-        R = PA1.points_registeration_rotation(m_A, m_B)
+    # def rotation(R, vector):
+    #     rotation_matrix = R  # Define the rotation matrix
+    #     # finding the determinanat
+    #     determinant = np.linalg.det(rotation_matrix)
 
-        position = np.mean(B, axis=0).reshape(
-            3, 1)-np.matmul(R, np.mean(A, axis=0).reshape(3, 1))
+    #     rotation_matrix_transpose = np.matrix.transpose(
+    #         R)  # Finding the transpose of rotation matrix
+    #     # RR^T = I check orthogonality
+    #     multiplication = np.matmul(rotation_matrix, rotation_matrix_transpose)
 
-        #print('error', ((np.matmul(R,np.transpose(A))+position-np.transpose(B))**2).mean(axis=None))
-        SVD_frame = np.hstack((R, position.reshape(3, 1)))
-        return SVD_frame
+    #     determinant = int(determinant)
+    #     euclidian_distance = int(np.sum((multiplication-np.identity(3))**2))
+    #     if ((determinant - 1) > 1e-3):
+    #         raise Exception("Not a Rotation matrix")
+    #     if ((euclidian_distance) > 1e-3):
+    #         raise Exception("Not a Rotation matrix")
 
-    # This part is the quaternion based points registeration function.
-    def points_registeration_q1_rotation(A, B):
-        H = np.matmul(np.matrix.transpose(A), B)
-        HT = np.transpose(H)
-        trace_H = np.trace(H)
-        deltaT = np.array([H[1, 2]-H[2, 1], H[2, 0]-H[0, 2], H[0, 1]-H[1, 0]])
-        delta = np.transpose(deltaT)
-        G = np.zeros((4, 4))
-        G[0, 0] = trace_H
-        G[0, 1:4] = deltaT
-        G[1:4, 0] = delta
-        G[1:4, 1:4] = H+HT-trace_H*np.eye(3)
-        evals, evectors = np.linalg.eig(G)
-        max_positions = np.argmax(evals)
-        q = evectors[:, max_positions]
-        Rotation_matrix = np.array([[q[0]**2+q[1]**2-q[2]**2-q[3]**2, 2*(q[1]*q[2]-q[0]*q[3]), 2*(q[1]*q[3]+q[0]*q[2])],
-                                    [2*(q[1]*q[2]+q[0]*q[3]), q[0]**2-q[1]**2 +
-                                        q[2]**2-q[3]**2, 2*(q[2]*q[3]-q[0]*q[1])],
-                                    [2*(q[1]*q[3]-q[0]*q[2]), 2*(q[2]*q[3]+q[0]*q[1]), q[0]**2-q[1]**2-q[2]**2+q[3]**2]])
-        return Rotation_matrix
+    #     new_vector = np.matmul(rotation_matrix, vector)
+    #     return new_vector
 
-    def points_registeration_q1(A, B):
-        m_A = A-np.mean(A, axis=0)
-        m_B = B-np.mean(B, axis=0)
+    # def frame_transformation(R, p, vector):
+    #     point_transformed = rotation(R, vector)+p.reshape(3, 1)
+    #     return point_transformed
+    #     # This part is the SVD based points registeration function.
 
-        R = points_registeration_rotation(m_A, m_B)
+    #     # The rotation function of processed points set A' B'
+    # def points_registeration_rotation(A, B):
+    #     H = np.matmul(np.matrix.transpose(A), B)
+    #     U, S, V = np.linalg.svd(H, full_matrices=False)
+    #     R = np.matmul(np.transpose(V), np.transpose(U))
+    #     if np.abs(np.linalg.det(R) - 1) > 1e-3:
+    #         raise Exception("Method fails!")
 
-        position = np.mean(B, axis=0).reshape(
-            3, 1)-np.matmul(R, np.mean(A, axis=0).reshape(3, 1))
-        # print('error',((np.matmul(R,np.transpose(A))+position-np.transpose(B))**2).mean(axis=None))
-        Frame_Q = np.hstack((R, position.reshape(3, 1)))
-        return Frame_Q
+    #     return R
 
-    # This part is for Q4.
-    # the inverse and composition operation used in Q4
-    def frame_inverse(R, p):
-        R_inverse = np.linalg.inv(R)
-        p_inverse = (-1)*np.matmul(R_inverse, p)
-        Frame_inverse = np.hstack((R_inverse, p_inverse.reshape(3, 1)))
-        return Frame_inverse
+    # # SVD registeration function
+    # def points_registeration(A, B):
+    #     m_A = A-np.mean(A, axis=0)
+    #     m_B = B-np.mean(B, axis=0)
 
-    def frame_composition(R1, p1, R2, p2):
-        R_comp = np.matmul(R1, R2)
-        p_comp = np.matmul(R1, p2)+p1
-        frame_comp = np.hstack((R_comp, p_comp.reshape(3, 1)))
-        return frame_comp
+    #     # R = points_registeration_rotation(m_A, m_B)
+    #     R = PA1.points_registeration_rotation(m_A, m_B)
 
-    # main part of Q4
-    def distortion_calibration_direct(d, D, a, A, c):
+    #     position = np.mean(B, axis=0).reshape(
+    #         3, 1)-np.matmul(R, np.mean(A, axis=0).reshape(3, 1))
 
-        F_D = points_registeration(d, D)
+    #     #print('error', ((np.matmul(R,np.transpose(A))+position-np.transpose(B))**2).mean(axis=None))
+    #     SVD_frame = np.hstack((R, position.reshape(3, 1)))
+    #     return SVD_frame
 
-        F_A = points_registeration(a, A)
+    # # This part is the quaternion based points registeration function.
+    # def points_registeration_q1_rotation(A, B):
+    #     H = np.matmul(np.matrix.transpose(A), B)
+    #     HT = np.transpose(H)
+    #     trace_H = np.trace(H)
+    #     deltaT = np.array([H[1, 2]-H[2, 1], H[2, 0]-H[0, 2], H[0, 1]-H[1, 0]])
+    #     delta = np.transpose(deltaT)
+    #     G = np.zeros((4, 4))
+    #     G[0, 0] = trace_H
+    #     G[0, 1:4] = deltaT
+    #     G[1:4, 0] = delta
+    #     G[1:4, 1:4] = H+HT-trace_H*np.eye(3)
+    #     evals, evectors = np.linalg.eig(G)
+    #     max_positions = np.argmax(evals)
+    #     q = evectors[:, max_positions]
+    #     Rotation_matrix = np.array([[q[0]**2+q[1]**2-q[2]**2-q[3]**2, 2*(q[1]*q[2]-q[0]*q[3]), 2*(q[1]*q[3]+q[0]*q[2])],
+    #                                 [2*(q[1]*q[2]+q[0]*q[3]), q[0]**2-q[1]**2 +
+    #                                     q[2]**2-q[3]**2, 2*(q[2]*q[3]-q[0]*q[1])],
+    #                                 [2*(q[1]*q[3]-q[0]*q[2]), 2*(q[2]*q[3]+q[0]*q[1]), q[0]**2-q[1]**2-q[2]**2+q[3]**2]])
+    #     return Rotation_matrix
 
-        F_D_inverse = frame_inverse(F_D[:, 0:3], F_D[:, 3])
+    # def points_registeration_q1(A, B):
+    #     m_A = A-np.mean(A, axis=0)
+    #     m_B = B-np.mean(B, axis=0)
 
-        F_C = frame_composition(F_D_inverse[:, 0:3], F_D_inverse[:, 3].reshape(
-            3, 1), F_A[:, 0:3], F_A[:, 3].reshape(3, 1))
-        #  print('F_C',F_C)
-        C_expect = frame_transformation(F_C[:, 0:3], F_C[:, 3], c)
+    #     R = points_registeration_rotation(m_A, m_B)
 
-        return C_expect
+    #     position = np.mean(B, axis=0).reshape(
+    #         3, 1)-np.matmul(R, np.mean(A, axis=0).reshape(3, 1))
+    #     # print('error',((np.matmul(R,np.transpose(A))+position-np.transpose(B))**2).mean(axis=None))
+    #     Frame_Q = np.hstack((R, position.reshape(3, 1)))
+    #     return Frame_Q
+
+    # # This part is for Q4.
+    # # the inverse and composition operation used in Q4
+    # def frame_inverse(R, p):
+    #     R_inverse = np.linalg.inv(R)
+    #     p_inverse = (-1)*np.matmul(R_inverse, p)
+    #     Frame_inverse = np.hstack((R_inverse, p_inverse.reshape(3, 1)))
+    #     return Frame_inverse
+
+    # def frame_composition(R1, p1, R2, p2):
+    #     R_comp = np.matmul(R1, R2)
+    #     p_comp = np.matmul(R1, p2)+p1
+    #     frame_comp = np.hstack((R_comp, p_comp.reshape(3, 1)))
+    #     return frame_comp
+
+    # # main part of Q4
+    # def distortion_calibration_direct(d, D, a, A, c):
+
+    #     F_D = points_registeration(d, D)
+
+    #     F_A = points_registeration(a, A)
+
+    #     F_D_inverse = frame_inverse(F_D[:, 0:3], F_D[:, 3])
+
+    #     F_C = frame_composition(F_D_inverse[:, 0:3], F_D_inverse[:, 3].reshape(
+    #         3, 1), F_A[:, 0:3], F_A[:, 3].reshape(3, 1))
+    #     #  print('F_C',F_C)
+    #     C_expect = frame_transformation(F_C[:, 0:3], F_C[:, 3], c)
+
+    #     return C_expect

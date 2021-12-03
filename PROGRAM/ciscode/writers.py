@@ -31,12 +31,12 @@ class PA4(Writer):
         outputs = []
         name = self.name
         header = name + "-Output.txt"
-        outputs.append(f"15,{header},0")
+        outputs.append(f"75,{header},0")
         arr = self.arr
         # logging.info("arr[0]")
         # logging.info(arr[0])
 
-        for i in range(15):
+        for i in range(75):
             outputs.append(" ".join(map(lambda x: f"  {x:.03f}", arr[i])))
 
         # outputs.append(" ".join(map(lambda x: f"  {x:.02f}", self.d)))

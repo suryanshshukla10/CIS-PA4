@@ -1,12 +1,14 @@
+from math import dist
 import click
 import logging
 from rich.logging import RichHandler
 from rich.progress import track
 from pathlib import Path
 import numpy as np
+from scipy.spatial.distance import cdist
 
 
-from ciscode import readers, pointTriangleDistance2, triangleMesh, pa1Functions, writers
+from ciscode import readers, pointTriangleDistance2, triangleMesh, pa1Functions, writers, icp, closestPoint
 
 FORMAT = "%(message)s"
 logging.basicConfig(
@@ -30,19 +32,16 @@ def main(
     output_dir = Path(output_dir).resolve()
     if not output_dir.exists():
         output_dir.mkdir()
+    ############Input data files############
 
-    # Read inputs
+    ##Surface Mesh Data structure##
     Vertices = readers.Vertices(data_dir / f"Problem4MeshFile.sur")
     logging.info(
         "loading triangle mesh  vertices data complete............................. ")
     Indices = readers.Indices(data_dir / f"Problem4MeshFile.sur")
     logging.info(
         "loading triangle mesh indices data complete.............................")
-
-    # logging.info("Vertices")
-    # logging.info(Vertices.arrVer)
-    # logging.info("Indices")
-    # logging.info(Indices.arrInd)
+  ##Body Defination Files##
 
     # reading Rigid bodyA and B
     RigidBodyA = readers.RigidBody(data_dir / f"Problem4-BodyA.txt")
@@ -51,52 +50,38 @@ def main(
     RigidBodyB = readers.RigidBody(data_dir / f"Problem4-BodyB.txt")
     logging.info(
         "loading Rigid Body B data complete.........................")
+    PA1 = pa1Functions.PA1
 ######Define the file name here ############################################
     temp3 = ['A', 'B', 'C', 'D', 'E', 'F']
     for q in track(temp3):
         input_file = "PA4-"+q
-        print("\t \t ------------------------------Input File: PA3-",
+        print("\t \t ------------------------------Input File: PA4-",
               q, "-Debug-SampleReadingsTest------------------------------")
-
         # Reading sampleReading.txt
         sampleReading = readers.sampleReading(data_dir / f"{input_file}{name}")
-
-        # logging.info("NA[0] frame 0")
-        # logging.info(sampleReadingA.NB_dict[0])
         logging.info("Debug-SampleReading reading complete...............")
 
-        # Tip and Y values of rigid body
-        # logging.info(RigidBodyA.tip)
-        # logging.info(RigidBodyA.Y)
-        # logging.info(RigidBodyB.tip)
-        # logging.info(RigidBodyB.Y)
-
-        # Registration function from PA1
-        PA1 = pa1Functions.PA1
-
-        output_pts_dict = {}
-
+        # Registration F_ak and F_bk
         logging.info("........Registration....F_a,k...")
-        # Running code for 15 the frames
-        for k in range(15):
+        point_cloud_sk = []
+        point_cloud_ck = []
+        for k in range(75):
             print("\t \t ------------------------------Frame",
                   k+1, "------------------------------")
             a = RigidBodyA.Y
             t_a = sampleReading.NA_dict[k]
-            F_ak = PA1.points_registeration(t_a, a)
-            # logging.info("..F_ak...matrix....")
-            # logging.info(F_ak)
-
-            # logging.info("........Registration....F_b,k...")
+            F_ak = PA1.points_registration(t_a, a)  # degine F_ak
+            # logging.info(t_a.shape)
+        # calculating F_bk
             b = RigidBodyB.Y
             t_b = sampleReading.NB_dict[k]
             # logging.info("t_b")
             # logging.info(t_b)
-            F_bk = PA1.points_registeration(t_b, b)
+            F_bk = PA1.points_registration(t_b, b)
             # logging.info("..F_bk...matrix....")
             # logging.info(F_bk)
 
-            # Pointer Tip with respect to rigid body B
+        # Pointer Tip with respect to rigid body B
             # logging.info("........d_k............")
             R_ak = F_ak[0:3, 0:3]
             P_ak = F_ak[0:3, 3]
@@ -109,7 +94,6 @@ def main(
 
             # logging.info("loading P_ak")
             # logging.info(P_ak)
-
             temp1 = np.matmul(R_ak, tip) + P_ak
 
             # logging.info("RA+P")
@@ -121,21 +105,12 @@ def main(
             R_bk_trans = np.transpose(R_bk)
 
             d_k = np.matmul(R_bk_trans, temp1) - np.matmul(R_bk_trans, P_bk)
-
+            # d_k = d_k.T
+            # logging.info(d_k.shape)
             # logging.info("d_k = F_bk_inv * F_ak * A_tip")
             # logging.info(d_k)
 
-            # defining Freg matrix to identity for only problem 3
-            Freg = np.identity(3)
-            # logging.info("Freg=")
-            # logging.info(Freg)
-
-            # computing sk
-            sk = np.matmul(Freg, d_k)
-            # logging.info("sk = Freg*dk")
-            # logging.info(sk)
-
-            # computing ck
+            #########triangle mesh calculation#####
             # triangle from the mesh
             # Get triangle vertices from the mesh data
             findTriangleVertices = triangleMesh.findTriangleVertices
@@ -153,52 +128,83 @@ def main(
 
             # To determine the closest point on the triangle
             # it always returns closest point on the triangle
-            closestPoint = pointTriangleDistance2.closestPoint
+            closestPointTriangle = pointTriangleDistance2.closestPoint
 
-            # print("\t \tFinding closest point on triangle for k=", k+1)
+            def FindClosestPointMesh(sk):
+                """[It calculates the closest point in triangle mesh]
 
-            distance = {}
-            pp0 = {}
-            # for i in track(range(3135)):
-            for i in range(3135):
-                V = findTriangleVertices.getTriVertice(
-                    Vertices.arrVer, Indices.arrInd, i)
-                v1 = V[0]
-                v2 = V[1]
-                v3 = V[2]
-                TRI = np.array([v1, v2, v3])
-                # logging.info(TRI)
-                new_dist, new_pp0 = closestPoint.pointTriangleDistance(TRI, sk)
-                distance[i] = new_dist
-                pp0[i] = new_pp0
+                Args:
+                    sk ([3x1 vector]): [description]
 
-            # finding minimum distance
-            minimum = min(distance.items(), key=lambda x: x[1])
-            minimum_key = minimum[0]
-            closest_point = pp0[minimum_key]
-            # logging.info(minimum[0])
-            # logging.info(pp0[minimum_key])
-            d = closest_point
-            c = closest_point
-            d_c = d - c
-            d_c_norm = np.linalg.norm(d_c)
+                Returns:
+                    [3x1]: [closest point]
+                """
+                distance = {}
+                pp0 = {}
+                # for i in track(range(3135)):
+                for i in range(3135):
+                    V = findTriangleVertices.getTriVertice(
+                        Vertices.arrVer, Indices.arrInd, i)
+                    v1 = V[0]
+                    v2 = V[1]
+                    v3 = V[2]
+                    TRI = np.array([v1, v2, v3])
+                    # logging.info(TRI)
+                    new_dist, new_pp0 = closestPointTriangle.pointTriangleDistance(
+                        TRI, sk)
+                    distance[i] = new_dist
+                    pp0[i] = new_pp0
+                    # finding minimum distance
+                minimum = min(distance.items(), key=lambda x: x[1])
+                minimum_key = minimum[0]
+                closest_point = pp0[minimum_key]
+                return closest_point
 
-            l1 = np.concatenate((d, c))
-            l2 = list(l1)
-            l2.append(d_c_norm)
-            # logging.info(d_c_norm)
-            # logging.info("output")
-            # logging.info(l2)
-            output_pts_dict[k] = l2
+            # Freg = np.identity(3)
+            # s_k = np.matmul(Freg, d_k)
+            s_k = d_k
+            c_k = FindClosestPointMesh(s_k)
+
+            ###Point cloud###
+
+            point_cloud_sk.append(d_k)
+            point_cloud_ck.append(c_k)
+        pt1 = np.array(point_cloud_sk)  # pt1 is point cloud
+        pt2 = np.array(point_cloud_ck)  # pt2 is point cloud
+        # logging.info(pt2.shape)
+        # logging.info(pt2.shape)
+        ICP = icp
+        T, distances = ICP.icp(pt1, pt2, init_pose=None,
+                               max_iterations=20, tolerance=0.001)
+        # logging.info(T)
+        R = T[0:3, 0:3]
+        p = T[0:3, 3]
+        # logging.info(R)
+        # logging.info(p)
+        # logging.info(pt1[1])
+        sk_new = []
+        ck_new = []
+        dist_new = []
+        for i in range(75):
+            ski = np.matmul(R, pt1[i]) + p
+            cki = np.matmul(R, pt1[i]) + p
+            dist_i = np.linalg.norm(ski - cki)
+
+            sk_new.append(ski)
+            ck_new.append(cki)
+            dist_new.append(dist_i)
+
+        sk_new = np.array(sk_new)
+        ck_new = np.array(ck_new)
+        dist_new = np.array(dist_new)
 
         out_list = []
-        for l in range(15):
-            out_list.append(output_pts_dict[l])
-            # logging.info(output_pts_dict[0])
-        out_list = np.array(out_list)
-        # logging.info(out_list)
-        # output = writers.PA3(name, l2)
-        # logging.info(l2)
+        l1 = []
+        for i in range(75):
+            temp = [sk_new[i, 0], sk_new[i, 1], sk_new[i, 2],
+                    ck_new[i, 0], ck_new[i, 1], ck_new[i, 2], dist_new[i]]
+            l1.append(temp)
+        out_list = np.array(l1)
 
         output = writers.PA4(input_file, out_list)
         output.save(output_dir)

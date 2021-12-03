@@ -2,7 +2,7 @@ import numpy as np
 from scipy.spatial.distance import cdist
 
 
-def transform_calc(A, B):
+def best_fit_transform(A, B):
     '''
     Calculates the least-squares best-fit transform between corresponding 3D points A->B
     Input:
@@ -43,38 +43,55 @@ def transform_calc(A, B):
     return T, R, t
 
 
-def icp(A, B, max_iterations=20, d_max=0.001):
-    """[summary]
-
-    Args:
-        A : Nx3 : ([numpy array]): [array of source 3D points]
-        B: Nx3 numpy array of destination 3D point
-
-        max_iterations (int, optional): [this is to exit the algorithm]. Defaults to 20.
-        d_max (float, optional): [convergence criteria, low value == bad convergence]. Defaults to 0.001.
-    Input : 
-        A = {a_i} and B = {b_i}, two point clouds
+def nearest_neighbor(src, dst):
+    '''
+    Find the nearest (Euclidean) neighbor in dst for each point in src
+    Input:
+        src: Nx3 array of points
+        dst: Nx3 array of points
     Output:
-        T: final homogeneous transformation which aligns A and B
+        distances: Euclidean distances of the nearest neighbor
+        indices: dst indices of the nearest neighbor
+    '''
+
+    all_dists = cdist(src, dst, 'euclidean')
+    indices = all_dists.argmin(axis=1)
+    distances = all_dists[np.arange(all_dists.shape[0]), indices]
+    return distances, indices
+
+
+def icp(A, B, init_pose=None, max_iterations=20, tolerance=0.001):
+    '''
+    The Iterative Closest Point method
+    Input:
+        A: Nx3 numpy array of source 3D points
+        B: Nx3 numpy array of destination 3D point
+        init_pose: 4x4 homogeneous transformation
+        max_iterations: exit algorithm after max_iterations
+        tolerance: convergence criteria
+    Output:
+        T: final homogeneous transformation
         distances: Euclidean distances (errors) of the nearest neighbor
-    """
-    # creating the src and dst variables
-    # copying the input A and B point cloud into in src and dst variables
-    # copying to maintain the original element of input A and B as it is. (not making changes in them)
+    '''
+
+    # make points homogeneous, copy them so as to maintain the originals
     src = np.ones((4, A.shape[0]))
     dst = np.ones((4, B.shape[0]))
     src[0:3, :] = np.copy(A.T)
     dst[0:3, :] = np.copy(B.T)
 
     # apply the initial pose estimation
-    T0 = np.identity(4)
-    src = np.dot(T0, src)
-    # error is set to 0
+    if init_pose is not None:
+        src = np.dot(init_pose, src)
+
     prev_error = 0
 
     for i in range(max_iterations):
+        # find the nearest neighbours between the current source and destination points
+        distances, indices = nearest_neighbor(src[0:3, :].T, dst[0:3, :].T)
 
-        ######Calculate the closest point in the triangular mesh####
+        # compute the transformation between the current source and nearest destination points
+        T, _, _ = best_fit_transform(src[0:3, :].T, dst[0:3, indices].T)
 
         # update the current source
         src = np.dot(T, src)
@@ -84,3 +101,8 @@ def icp(A, B, max_iterations=20, d_max=0.001):
         if abs(prev_error-mean_error) < tolerance:
             break
         prev_error = mean_error
+
+    # calculate final transformation
+    T, _, _ = best_fit_transform(A, src[0:3, :].T)
+
+    return T, distances

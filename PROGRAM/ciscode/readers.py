@@ -74,7 +74,7 @@ class sampleReading:
         NB_dict = {}
         NA_dict[0] = arr[0:6]
         NB_dict[0] = arr[6:12]
-        keys = range(14)
+        keys = range(74)
         for i in keys:
             k = i + 1
             x_a = k * 10 + k*6

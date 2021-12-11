@@ -35,10 +35,10 @@ def main(
     ############Input data files############
 
     ##Surface Mesh Data structure##
-    Vertices = readers.Vertices(data_dir / f"Problem4MeshFile.sur")
+    Vertices = readers.Vertices(data_dir / f"Problem5MeshFile.sur")
     logging.info(
         "loading triangle mesh  vertices data complete............................. ")
-    Indices = readers.Indices(data_dir / f"Problem4MeshFile.sur")
+    Indices = readers.Indices(data_dir / f"Problem5MeshFile.sur")
     logging.info(
         "loading triangle mesh indices data complete.............................")
   ##Body Defination Files##
@@ -126,88 +126,90 @@ def main(
             # logging.info(TRI)
             # TRI = np.array()
 
-            # To determine the closest point on the triangle
-            # it always returns closest point on the triangle
-            closestPointTriangle = pointTriangleDistance2.closestPoint
+            logging.info(V)
 
-            def FindClosestPointMesh(sk):
-                """[It calculates the closest point in triangle mesh]
+        #     # To determine the closest point on the triangle
+        #     # it always returns closest point on the triangle
+        #     closestPointTriangle = pointTriangleDistance2.closestPoint
 
-                Args:
-                    sk ([3x1 vector]): [description]
+        #     def FindClosestPointMesh(sk):
+        #         """[It calculates the closest point in triangle mesh]
 
-                Returns:
-                    [3x1]: [closest point]
-                """
-                distance = {}
-                pp0 = {}
-                # for i in track(range(3135)):
-                for i in range(3135):
-                    V = findTriangleVertices.getTriVertice(
-                        Vertices.arrVer, Indices.arrInd, i)
-                    v1 = V[0]
-                    v2 = V[1]
-                    v3 = V[2]
-                    TRI = np.array([v1, v2, v3])
-                    # logging.info(TRI)
-                    new_dist, new_pp0 = closestPointTriangle.pointTriangleDistance(
-                        TRI, sk)
-                    distance[i] = new_dist
-                    pp0[i] = new_pp0
-                    # finding minimum distance
-                minimum = min(distance.items(), key=lambda x: x[1])
-                minimum_key = minimum[0]
-                closest_point = pp0[minimum_key]
-                return closest_point
+        #         Args:
+        #             sk ([3x1 vector]): [description]
 
-            # Freg = np.identity(3)
-            # s_k = np.matmul(Freg, d_k)
-            s_k = d_k
-            c_k = FindClosestPointMesh(s_k)
+        #         Returns:
+        #             [3x1]: [closest point]
+        #         """
+        #         distance = {}
+        #         pp0 = {}
+        #         # for i in track(range(3135)):
+        #         for i in range(3135):
+        #             V = findTriangleVertices.getTriVertice(
+        #                 Vertices.arrVer, Indices.arrInd, i)
+        #             v1 = V[0]
+        #             v2 = V[1]
+        #             v3 = V[2]
+        #             TRI = np.array([v1, v2, v3])
+        #             # logging.info(TRI)
+        #             new_dist, new_pp0 = closestPointTriangle.pointTriangleDistance(
+        #                 TRI, sk)
+        #             distance[i] = new_dist
+        #             pp0[i] = new_pp0
+        #             # finding minimum distance
+        #         minimum = min(distance.items(), key=lambda x: x[1])
+        #         minimum_key = minimum[0]
+        #         closest_point = pp0[minimum_key]
+        #         return closest_point
 
-            ###Point cloud###
+        #     # Freg = np.identity(3)
+        #     # s_k = np.matmul(Freg, d_k)
+        #     s_k = d_k
+        #     c_k = FindClosestPointMesh(s_k)
 
-            point_cloud_sk.append(d_k)
-            point_cloud_ck.append(c_k)
-        pt1 = np.array(point_cloud_sk)  # pt1 is point cloud
-        pt2 = np.array(point_cloud_ck)  # pt2 is point cloud
-        # logging.info(pt2.shape)
-        # logging.info(pt2.shape)
-        ICP = icp
-        T, distances = ICP.icp(pt1, pt2, init_pose=None,
-                               max_iterations=20, tolerance=0.001)
-        # logging.info(T)
-        R = T[0:3, 0:3]
-        p = T[0:3, 3]
-        # logging.info(R)
-        # logging.info(p)
-        # logging.info(pt1[1])
-        sk_new = []
-        ck_new = []
-        dist_new = []
-        for i in range(75):
-            ski = np.matmul(R, pt1[i]) + p
-            cki = np.matmul(R, pt1[i]) + p
-            dist_i = np.linalg.norm(ski - cki)
+        #     ###Point cloud###
 
-            sk_new.append(ski)
-            ck_new.append(cki)
-            dist_new.append(dist_i)
+        #     point_cloud_sk.append(d_k)
+        #     point_cloud_ck.append(c_k)
+        # pt1 = np.array(point_cloud_sk)  # pt1 is point cloud
+        # pt2 = np.array(point_cloud_ck)  # pt2 is point cloud
+        # # logging.info(pt2.shape)
+        # # logging.info(pt2.shape)
+        # ICP = icp
+        # T, distances = ICP.icp(pt1, pt2, init_pose=None,
+        #                        max_iterations=20, tolerance=0.001)
+        # # logging.info(T)
+        # R = T[0:3, 0:3]
+        # p = T[0:3, 3]
+        # # logging.info(R)
+        # # logging.info(p)
+        # # logging.info(pt1[1])
+        # sk_new = []
+        # ck_new = []
+        # dist_new = []
+        # for i in range(75):
+        #     ski = np.matmul(R, pt1[i]) + p
+        #     cki = np.matmul(R, pt1[i]) + p
+        #     dist_i = np.linalg.norm(ski - cki)
 
-        sk_new = np.array(sk_new)
-        ck_new = np.array(ck_new)
-        dist_new = np.array(dist_new)
+        #     sk_new.append(ski)
+        #     ck_new.append(cki)
+        #     dist_new.append(dist_i)
 
-        out_list = []
-        l1 = []
-        for i in range(75):
-            temp = [sk_new[i, 0], sk_new[i, 1], sk_new[i, 2],
-                    ck_new[i, 0], ck_new[i, 1], ck_new[i, 2], dist_new[i]]
-            l1.append(temp)
-        out_list = np.array(l1)
+        # sk_new = np.array(sk_new)
+        # ck_new = np.array(ck_new)
+        # dist_new = np.array(dist_new)
 
-        output = writers.PA4(input_file, out_list)
-        output.save(output_dir)
+        # out_list = []
+        # l1 = []
+        # for i in range(75):
+        #     temp = [sk_new[i, 0], sk_new[i, 1], sk_new[i, 2],
+        #             ck_new[i, 0], ck_new[i, 1], ck_new[i, 2], dist_new[i]]
+        #     l1.append(temp)
+        # out_list = np.array(l1)
+
+        # output = writers.PA4(input_file, out_list)
+        # output.save(output_dir)
 
 
 if __name__ == "__main__":

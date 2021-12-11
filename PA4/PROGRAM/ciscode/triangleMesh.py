@@ -20,8 +20,10 @@ class findTriangleVertices:
 
         triangle = tInd[i]
 
-        V1 = verts[int(triangle[0])]
-        V2 = verts[int(triangle[1])]
-        V3 = verts[int(triangle[2])]
+        # V1 = verts[int(triangle[0])]
+        # V2 = verts[int(triangle[1])]
+        # V3 = verts[int(triangle[2])]
 
-        return [V1, V2, V3]
+        vertices = np.array(verts)
+
+        return vertices
